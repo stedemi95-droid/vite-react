@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
 
 /* ── palette (UNCHANGED) ── */
@@ -31,12 +31,12 @@ const e = (n: any, s?: any) => {
 };
 
 const n = (v: any) => parseFloat(v) || 0;
-const uid = () => Math.random().toString(36).slice(2, 9);
 
-/* ── STORAGE FIX (TS2554 RESOLVED) ── */
+/* ── STORAGE SAFE (NO TS ERRORS) ── */
 async function ld() {
   try {
-    const r = await (window as any).storage?.get?.("fin8", null);
+    const storage = (window as any).storage;
+    const r = await storage?.get?.("fin8", null);
     return r ? JSON.parse(r.value) : null;
   } catch {
     return null;
@@ -45,51 +45,28 @@ async function ld() {
 
 async function sv(s: any) {
   try {
-    await (window as any).storage?.set?.("fin8", JSON.stringify(s), null);
+    const storage = (window as any).storage;
+    await storage?.set?.("fin8", JSON.stringify(s), null);
   } catch {}
 }
 
-/* ── COMPONENTS (PRESERVED UI, FIXED TYPES) ── */
-
-const Tag = ({ children, col = C.ink }: any) => (
-  <span style={{
-    display: "inline-block",
-    padding: "1px 7px",
-    borderRadius: 3,
-    fontSize: 9,
-    fontWeight: 700,
-    background: col + "20",
-    color: col,
-  }}>
+/* ── CARD ── */
+const Card = ({ children, style = {}, accent }: any) => (
+  <div
+    style={{
+      background: C.paper,
+      padding: 16,
+      borderRadius: 12,
+      borderLeft: accent ? `3px solid ${accent}` : undefined,
+      ...style,
+    }}
+  >
     {children}
-  </span>
+  </div>
 );
 
-const Mono = ({ children, style }: any) => (
-  <span style={{ fontFamily: "'IBM Plex Mono',monospace", ...style }}>
-    {children}
-  </span>
-);
-
-const BarStrip = ({ val, max, col }: any) => {
-  const pct = Math.min((val / Math.max(max, 1)) * 100, 100);
-  return (
-    <div style={{ height: 3, background: "#ddd", borderRadius: 99 }}>
-      <div style={{ width: pct + "%", height: "100%", background: col }} />
-    </div>
-  );
-};
-
-/* ── INPUT FIXED ── */
-const NumInput = ({
-  value,
-  onChange,
-  big = false,
-}: {
-  value: any;
-  onChange: (v: string) => void;
-  big?: boolean;
-}) => (
+/* ── INPUT ── */
+const NumInput = ({ value, onChange, big = false }: any) => (
   <input
     type="number"
     value={value}
@@ -102,29 +79,6 @@ const NumInput = ({
       width: "100%",
     }}
   />
-);
-
-/* ── CARD FIX (IMPORTANT) ── */
-const Card = ({
-  children,
-  style = {},
-  accent,
-}: {
-  children: any;
-  style?: any;
-  accent?: string;
-}) => (
-  <div
-    style={{
-      background: C.paper,
-      padding: 16,
-      borderRadius: 12,
-      borderLeft: accent ? `3px solid ${accent}` : undefined,
-      ...style,
-    }}
-  >
-    {children}
-  </div>
 );
 
 /* ── MAIN ── */
@@ -175,7 +129,7 @@ export default function App() {
 
         <NumInput
           value={st.stip}
-          onChange={(v) => upd({ stip: v })}
+          onChange={(v: any) => upd({ stip: v })}
           big
         />
       </Card>
