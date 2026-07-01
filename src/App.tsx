@@ -1,9 +1,14 @@
 import { useState, useEffect } from "react";
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
 } from "recharts";
 
-/* ── palette (UNCHANGED) ── */
+/* ── palette ── */
 const C = {
   bg: "#F4EFE6",
   paper: "#FAF7F2",
@@ -16,14 +21,12 @@ const C = {
   sage: "#4A7C6F",
   sageLight: "#DDF0EB",
   blue: "#2B5AA0",
-  danger: "#B33030",
-  dangerLight: "#F5DADA",
 };
 
-/* ── utils SAFE ── */
-const e = (n: any, s?: any) => {
+/* ── utils ── */
+const e = (n: any, short = false) => {
   const v = parseFloat(n) || 0;
-  if (s && Math.abs(v) >= 1000) return `€${(v / 1000).toFixed(1)}k`;
+  if (short && Math.abs(v) >= 1000) return `€${(v / 1000).toFixed(1)}k`;
   return new Intl.NumberFormat("it-IT", {
     style: "currency",
     currency: "EUR",
@@ -32,106 +35,94 @@ const e = (n: any, s?: any) => {
 
 const n = (v: any) => parseFloat(v) || 0;
 
-/* ── STORAGE SAFE (NO TS ERRORS) ── */
-async function ld() {
+/* ── storage SAFE (no TS errors) ── */
+async function load() {
   try {
-    const storage = (window as any).storage;
-    const r = await storage?.get?.("fin8", null);
+    const r = await (window as any).storage?.get?.("fin8", null);
     return r ? JSON.parse(r.value) : null;
   } catch {
     return null;
   }
 }
 
-async function sv(s: any) {
+async function save(s: any) {
   try {
-    const storage = (window as any).storage;
-    await storage?.set?.("fin8", JSON.stringify(s), null);
+    await (window as any).storage?.set?.("fin8", JSON.stringify(s), null);
   } catch {}
 }
 
-/* ── CARD ── */
-const Card = ({ children, style = {}, accent }: any) => (
+/* ── UI COMPONENTS ── */
+const Card = ({ children, accent }: any) => (
   <div
     style={{
       background: C.paper,
       padding: 16,
       borderRadius: 12,
-      borderLeft: accent ? `3px solid ${accent}` : undefined,
-      ...style,
+      borderLeft: accent ? `4px solid ${accent}` : undefined,
+      marginBottom: 12,
     }}
   >
     {children}
   </div>
 );
 
-/* ── INPUT ── */
-const NumInput = ({ value, onChange, big = false }: any) => (
+const Input = ({ value, onChange }: any) => (
   <input
-    type="number"
     value={value}
     onChange={(e) => onChange(e.target.value)}
     style={{
-      fontSize: big ? 24 : 14,
+      width: "100%",
+      fontSize: 18,
+      padding: 6,
       border: "none",
       borderBottom: "1px solid #ccc",
       background: "transparent",
-      width: "100%",
     }}
   />
 );
 
-/* ── MAIN ── */
+/* ── APP ── */
 export default function App() {
   const [st, setSt] = useState<any>({
     stip: "2215",
     spese: [],
     fisse: [],
-    conti: [],
     hist: [],
-    budSv: "1200",
-    budTot: "1800",
-    insIdx: 0,
   });
 
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    ld().then((d) => {
+    load().then((d) => {
       if (d) setSt(d);
       setReady(true);
     });
   }, []);
 
   useEffect(() => {
-    if (ready) sv(st);
+    if (ready) save(st);
   }, [st, ready]);
 
   const upd = (p: any) => setSt((x: any) => ({ ...x, ...p }));
 
   const stip = n(st.stip);
-  const totV = (st.spese || []).reduce((a: number, s: any) => a + n(s.costo), 0);
-  const totF = (st.fisse || []).reduce((a: number, s: any) => a + n(s.costo), 0);
-  const disp = stip - totV - totF;
+  const totSpese = (st.spese || []).reduce((a: number, s: any) => a + n(s.costo), 0);
+  const totFisse = (st.fisse || []).reduce((a: number, s: any) => a + n(s.costo), 0);
+  const disp = stip - totSpese - totFisse;
 
-  const areaD = (st.hist || []).slice(-12).map((m: any) => ({
+  const chart = (st.hist || []).slice(-12).map((m: any) => ({
     name: m.m,
-    Spese: n(m.tot),
-    Risparmio: Math.max(n(m.stip) - n(m.tot), 0),
+    spese: n(m.tot),
+    risparmio: Math.max(n(m.stip) - n(m.tot), 0),
   }));
 
   return (
-    <div style={{ padding: 20, fontFamily: "sans-serif", background: C.bg }}>
-      
+    <div style={{ padding: 20, background: C.bg, minHeight: "100vh" }}>
       <Card accent={C.terra}>
         <h2>Finanze</h2>
-        <div>Disponibile: {e(disp)}</div>
+        <div style={{ marginBottom: 10 }}>Disponibile: {e(disp)}</div>
 
-        <NumInput
-          value={st.stip}
-          onChange={(v: any) => upd({ stip: v })}
-          big
-        />
+        <Input value={st.stip} onChange={(v: any) => upd({ stip: v })} />
       </Card>
 
       <Card>
@@ -155,16 +146,15 @@ export default function App() {
       <Card>
         <h3>Trend</h3>
         <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={areaD}>
+          <AreaChart data={chart}>
             <XAxis dataKey="name" />
             <YAxis />
             <Tooltip />
-            <Area dataKey="Spese" stroke={C.blue} fill={C.blue} />
-            <Area dataKey="Risparmio" stroke={C.sage} fill={C.sage} />
+            <Area dataKey="spese" stroke={C.blue} fill={C.blue} />
+            <Area dataKey="risparmio" stroke={C.sage} fill={C.sage} />
           </AreaChart>
         </ResponsiveContainer>
       </Card>
-
     </div>
   );
 }
